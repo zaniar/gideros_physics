@@ -1,0 +1,167 @@
+<exporter>
+    <!-- identifier of the exporter -->
+	<name>nightspade.lua</name>
+	
+	<!-- display name of the exporter for the combo box -->
+	<displayName>Nightspade's LUA</displayName>
+	
+	<!-- description of the exporter -->
+	<description>This exporter creates a LUA file</description>
+
+    <!-- exporter version -->
+	<version>1.0</version>
+	
+	<!-- direction of the y-axis up / down -->
+    <yAxisDirection>down</yAxisDirection>
+    
+    <!-- physics engine: box2d / chipmunk -->
+	<physicsEngine>box2d</physicsEngine>
+	
+	<!-- name of the template -->
+	<template>template.lua</template>
+	
+	<!-- file extension for the file to create -->
+	<fileExtension>lua</fileExtension>
+	
+	<!-- anchorpoint -->
+	<anchorPoint>
+	    <!-- does the system use anchor ponits ? -->
+		<enabled>no</enabled>
+		
+		<!-- default of the anchor point -->
+		<relX>0.5</relX>		
+		<relY>0.5</relY>
+	</anchorPoint>
+	
+	<!-- origin of the coordinate system -->
+    <origin>
+        <!-- may be: anchorPoint or fixed -->
+        <!-- <type>anchorPoint</type> -->
+		<type>fixed</type>
+	    <relX>0.0</relX>
+		<relY>1.0</relY>
+    </origin>
+    
+    <!--
+    Example for a fixed anchor point
+    <origin>
+        <type>fixed</type>
+	    <relX>0.5</relX>
+		<relY>0.5</relY>
+    </origin>
+	-->
+	
+	<!--  
+         global parameters for the file 
+         may be empty.
+         can be referenced with {{global.<name>}} from the template file
+    -->
+	<global>
+	</global>
+	
+	<!-- 
+	    body parameters can be set for each body 
+	    see above for description
+	    parameters will be available as {{<body>.<name>}}
+	    
+	    {% for body in bodies %}
+	        ...
+	            {{body.<name>}}
+	        ...
+	    {% endfor %}
+	-->
+	<body>
+		<parameter>
+			<name>fixedRotation</name>
+			<displayName>Fixed rotation</displayName>
+			<type>bool</type>
+			<default>no</default>
+		</parameter>
+	</body>
+	
+	<!-- 
+	    fixture parameterscan be set for each polygon 
+	    see above for description
+	    parameters will be available as {{<fixture>.<name>}}
+	    
+	    {% for body in bodies %}
+	        {% for fixture in body.fixtures %}
+	            ...
+	            {{fixture.<name>}}
+	            ...
+    	    {% endfor %}
+	    {% endfor %}
+	-->
+	<fixture>
+		<parameter>
+			<name>id</name>
+			<displayName>ID</displayName>
+			<type>string</type>
+		</parameter>
+		<parameter>
+			<name>density</name>
+			<displayName>Density</displayName>
+			<type>float</type>
+			<min>-1000</min>
+			<max>1000</max>
+			<default>2.0</default>
+		</parameter>
+		<parameter>
+			<name>restitution</name>
+			<displayName>Restitution</displayName>
+			<type>float</type>
+			<min>0</min>
+			<max>1000</max>
+			<default>0.0</default>
+		</parameter>
+		<parameter>
+			<name>friction</name>
+			<displayName>Friction</displayName>
+			<type>float</type>
+			<min>0</min>
+			<max>1000</max>
+			<default>0.0</default>
+		</parameter>
+		<parameter>
+			<name>isSensor</name>
+			<displayName>Is Sensor</displayName>
+			<type>bool</type>
+			<default>false</default>
+		</parameter>
+		<parameter>
+            <name>filter_groupIndex</name>
+            <displayName>Group</displayName>
+            <description>Collision group.</description>
+            <shortDescription></shortDescription>
+            <type>int</type>
+            <default>0</default>
+        </parameter>
+
+        <parameter>
+            <name>filter_bitfield</name>
+            <type>bitfield</type>
+            <size>16</size>
+        </parameter>
+
+        <parameter>
+            <name>filter_categoryBits</name>
+            <displayName>Cat.</displayName>
+            <description>Collision category</description>
+            <shortDescription>Collision category</shortDescription>
+            <type>uint16</type>
+            <default>1</default>
+            <bitfield>yes</bitfield>
+        </parameter>
+        <parameter>
+            <name>filter_maskBits</name>
+            <displayName>Mask</displayName>
+            <description>Collision mask</description>
+            <shortDescription>Collision mask</shortDescription>
+            <type>uint16</type>
+            <default>65535</default>
+            <bitfield>yes</bitfield>
+        </parameter>
+
+	</fixture>
+</exporter>
+
