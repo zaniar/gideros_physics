@@ -14,6 +14,7 @@ Physics = gideros.class()
 
 function Physics:init(scene, gx, gy, doSleep)
 	self.scene = scene
+	self.timeStep = 1/60
 
 	self.world = b2.World.new(gx, gy, doSleep)
 	self.bodies = {}
@@ -32,17 +33,51 @@ function Physics:addBody(object, bodyDef, fixtures)
 			bodyDef.position = {x = object:getX(), y = object:getY()}
 		end
 		if bodyDef.angle == nil then
-			bodyDef.angle = object:getRotation() * math.pi / 180
+			bodyDef.angle = math.rad(object:getRotation())
 		end
 	end
 	
 	local body = self.world:createBody(bodyDef)
+	body.type = bodyDef.type
 	
 	if object then
 		body.object = object
 		object.body = body
 		
 		self.bodies[#self.bodies+1] = body
+		
+		-- TODO link Body's methods to Sprite
+		object.set = function(self, param, value)
+			if param == "x" then
+				local x, y = self.body:getPosition()
+				self.body:setPosition(value, y)
+			elseif param == "y" then
+				local x, y = self.body:getPosition()
+				self.body:setPosition(x, value)
+			elseif param == "rotation" then
+				self.body:setRotation(math.rad(value))
+			else
+				Sprite.set(self, param, value)
+			end
+		end
+		
+		object.setX = function(self, x)
+			local _, y = self.body:getPosition()
+			self.body:setPosition(x, y)
+		end
+		
+		object.setY = function(self, y)
+			local x, _ = self.body:getPosition()
+			self.body:setPosition(x, y)
+		end
+		
+		object.setPosition = function(self, x, y)
+			self.body:setPosition(x, y)
+		end
+		
+		object.setRotation = function(self, rotation)
+			self.body:setRotation(math.rad(rotation))
+		end
 	end
 	
 	if fixtures.density or fixtures.friction or fixtures.restitution or fixtures.isSensor or fixtures.shape then
@@ -55,6 +90,7 @@ function Physics:addBody(object, bodyDef, fixtures)
 		if fixtures[i].friction ~= nil then fixtureDef.friction = fixtures[i].friction end
 		if fixtures[i].restitution ~= nil then fixtureDef.restitution = fixtures[i].restitution end
 		if fixtures[i].isSensor ~= nil then fixtureDef.isSensor = fixtures[i].isSensor end
+		if fixtures[i].filter ~= nil then fixtureDef.filter = fixtures[i].filter end
 		
 		local id = "";
 		if fixtures[i].id ~= nil then id = fixtures[i].id end
@@ -64,7 +100,15 @@ function Physics:addBody(object, bodyDef, fixtures)
 			local shape = nil
 			local fixture = nil
 			
-			if shapeDef.type == "circle" then
+			if shapeDef.type == "box" then
+				if shapeDef.center == nil then shapeDef.center = {x=0, y=0} end
+				if shapeDef.angle == nil then shapeDef.angle = 0 end
+				shape = b2.PolygonShape.new()
+				shape:setAsBox(shapeDef.width*.5, shapeDef.height*.5, shapeDef.center.x, shapeDef.center.y, shapeDef.angle)
+				fixtureDef.shape = shape
+				fixture = body:createFixture(fixtureDef)
+				fixture.id = id
+			elseif shapeDef.type == "circle" then
 				if shapeDef.center == nil then shapeDef.center = {x=0, y=0} end
 				shape = b2.CircleShape.new(shapeDef.center.x, shapeDef.center.y, shapeDef.radius)
 				fixtureDef.shape = shape
@@ -79,6 +123,7 @@ function Physics:addBody(object, bodyDef, fixtures)
 					fixture.id = id
 				end
 			elseif shapeDef.type == "edge" then
+				-- TODO
 			elseif shapeDef.type == "chain" then
 				shape = b2.ChainShape.new()
 				shape:createChain(unpack(shapeDef.vertices))
@@ -95,6 +140,7 @@ function Physics:addBody(object, bodyDef, fixtures)
 		end
 	end
 	
+	-- TODO link Sprite's methods to Body
 	body.get = function(self, param)
 		if param == "x" then
 			local x,y = body:getPosition()
@@ -102,6 +148,8 @@ function Physics:addBody(object, bodyDef, fixtures)
 		elseif param == "y" then
 			local x,y = body:getPosition()
 			return y
+		elseif param == "rotation" then
+			return math.deg(body:getAngle())
 		end
 	end
 	
@@ -112,7 +160,13 @@ function Physics:addBody(object, bodyDef, fixtures)
 		elseif param == "y" then
 			local x,y = body:getPosition()
 			body:setPosition(x, value)
+		elseif param == "rotation" then
+			body:setAngle(math.rad(value))
 		end
+	end
+	
+	body.getType = function(self)
+		return body.type
 	end
 	
 	return body
@@ -135,7 +189,16 @@ function Physics:removeBody(arg)
 		end
 	end
 	
+	--  TODO revert to original methods
+	body.object.set = Sprite.set(self, param, value)
+	object.setX = Sprite.setX(self, x)
+	object.setY = Sprite.setY(self, y)
+	object.setPosition = Sprite.setPosition(self, x, y)
+	object.setRotation = Sprite.setRotation(self, rotation)
+	
 	self.world:destroyBody(body)
+	
+	body = nil
 end
 
 -- load fixtures definition from file
@@ -152,15 +215,16 @@ end
 -- remove joint
 function Physics:removeJoint(arg)
 	self.world:destroyJoint(arg)
+	
+	arg = nil
 end
 
 -- set debugDraw
-function Physics:setDebugDraw(flag)
+function Physics:setDebugDraw(parent)
+	if parent == nil then parent = self.scene end
+	
 	self.debugDraw = b2.DebugDraw.new()
-	if flag ~= nil then
-		self.debugDraw:setFlags(flag)
-	end
-	self.scene:addChild(self.debugDraw)
+	parent:addChild(self.debugDraw)
 	
 	self.world:setDebugDraw(self.debugDraw)
 end
@@ -170,13 +234,30 @@ function Physics:getDebugDraw()
 	return self.debugDraw
 end
 
+-- set debugDraw flag
+function Physics:setDebugFlag(flag)
+	if flag ~= nil then
+		self.debugDraw:setFlags(flag)
+	end
+end
+
+-- get time step
+function Physics:getTimeStep()
+	return self.timeStep
+end
+
+-- set time step
+function Physics:setTimeStep(timeStep)
+	self.timeStep = timeStep
+end
+
 -- run physics simulation
 -- automatically called when physics object initialized
 function Physics:run()
-	self.world:step(1/60, 8, 3)
+	self.world:step(self.timeStep, 8, 3)
 	for i = 1, #self.bodies do
-		self.bodies[i].object:setPosition(self.bodies[i]:getPosition())
-		self.bodies[i].object:setRotation(self.bodies[i]:getAngle() * 180 / math.pi)
+		Sprite.setPosition(self.bodies[i].object, self.bodies[i]:getPosition())
+		Sprite.setRotation(self.bodies[i].object, self.bodies[i]:getAngle() * 180 / math.pi)
 	end
 end
 
